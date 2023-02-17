@@ -1,8 +1,107 @@
 
+➵   ███╗░░░███╗░█████╗░██████╗░██╗░██████╗░█████╗░░█████╗░██╗░░░░░██████╗░███████╗██╗░░░██╗
+➵   ████╗░████║██╔══██╗██╔══██╗██║██╔════╝██╔══██╗██╔══██╗██║░░░░░██╔══██╗██╔════╝██║░░░██║
+➵   ██╔████╔██║███████║██████╔╝██║╚█████╗░██║░░╚═╝███████║██║░░░░░██║░░██║█████╗░░╚██╗░██╔╝
+➵   ██║╚██╔╝██║██╔══██║██╔══██╗██║░╚═══██╗██║░░██╗██╔══██║██║░░░░░██║░░██║██╔══╝░░░╚████╔╝░
+➵   ██║░╚═╝░██║██║░░██║██║░░██║██║██████╔╝╚█████╔╝██║░░██║███████╗██████╔╝███████╗░░╚██╔╝░░
+➵   ╚═╝░░░░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝╚═════╝░░╚════╝░╚═╝░░╚═╝╚══════╝╚═════╝░╚══════╝░░░╚═╝░░░
+
+
+
+
 INSTALACION DE ARCH LINUX EN SISTEMAS UEFI:
 
-➵
-➵
-➵
-➵
-➵
+➵ INICIO:
+	1) Ingresar 'loadkeys es' para poner el teclado en español.
+	2) Conectamos el notebook a Internet con el telefono
+	3) probamos nuestro Internet con 'ping -c 1 google.cl'
+
+➵ PARTICIO UEFI: 
+	1) Para saber si nuestro sistema es UEFI ingresamos 'ls 
+	   /sys/firmware/efi/efivars' (debe salir un listado grande) 
+	
+	2) Ingresamos 'CFDISK' para abrir programa y hacer las particiones y 
+	   ponemos 'GPT' (para UEFI)
+		2.1) Particion GRUB:
+			512M (type=EFISYSTEM) (write=YES)
+		2.2) Particion / (RAIZ):
+			Capacidad segun disco (type=LINUX FILESYSTEM) (WRITE=YES)
+		2.3) Particion HOME:
+			Capacidad segun disco (type=LINUX FILESYSTEM) (WRITE=YES)
+		2.4 Particion SWAP:
+			3GB Minimo (type=SWAP) (WRITE=YES)
+	
+	3) Formatear Particiones:
+		3.1) '/boot' 	= mkfs.vfat -F32 	/dev/sdb1
+		3.2) '/' 	= mkfs.ext4 		/dev/sdb2 (y yes)
+		3.3) '/home'	= mkfs.ext4		/dev/sdb3 (y yes)
+		3.4) 'swap'	= mkswap		/dev/sdb4 (y despues 'swapon'
+
+	4) UEFI Montar particiones creadas:
+		4.1)	'mount /dev/sdb2 /mnt (MONTAMOS LA RAIZ)
+		4.2)	'mkdir /mnt/boot' (CREAMOS CARPETA PARA BOOT
+		4.2.1)	'mkdir /mnt/boot/efi' (CREAMOS 2DA CARPETA PARA BOOT)
+		4.2.2)	'mount /dev/sdb1 /mnt/boot/efi' (MONTAMOS LA PARTICION BOOT)
+		4.3)	'mkdir /mnt/home' (CREAMOS CARPETA HOME)
+		4.3.1	'mount /dev/sdb3 /mnt/home' (MONTAMOS HOME)
+
+➵ INSTALACION DE PAQUETES BASE:
+	1) 'pacstrap /mnt linux linux-firmware base nano grub networkmanager dhcpcd 
+	    efibootmgr'
+	    (linux (KERNEL), linux-firmware (hardware drivers), base (bases linux),
+	     nano (editor de texto), Grub (arranque sistema), networkmanager (internet),
+	     dhcpcd (gestiona conexiones), efibootmgr (para UEFI)
+	2) 'pacstrap /mnt netctl wpa_supplicant dialog'
+	    (para conexion WIFI)
+
+➵ GENERAR FSTAB, ESTO ES PARA GUARDAR PARTICIONES:
+	1) 'genfstab /mnt >> /mnt/etc/fstab' (CREACION DE FSTAB)
+	   'cat /mnt/etc/fstab' (VERIFICAMOS QUE ESTE CREADO FSTAB)
+
+
+➵ CONFIGURACION: ZONA HORARIA, RELOJ, DISTRIBUCION DE TECLADO:
+	1) Ingresamos al sistema: 'arch-chroot /mnt' (entramos al sistema como root)
+	2) Colocamos nombre al equipo: 'echo "nombre de equipo" > /etc/hostname
+	3) Zona horaria: 'ln -sf /usr/share/zoneinfo/America/Santiago /etc/localtime'
+	4) Idioma: 'nano /etc/locale.gen' buscamos "es_CL.UTF8" sacamos el # y guardamos
+	   Escribimos 'locale-gen' para actualizar los cambios
+	5) Reloj: 'hwclock -w' y ponemos 'date' para confirmar la hora
+	6) teclado: 'echo KEYMAP=es > /etc/vconsole.conf'
+	7) Lenguaje: 'echo LANG=es_CL.UTF8 > /etc/locale.conf
+
+➵ GRUB UEFI Y CONFIGURACION:
+	1) Instalamos el arranque: 'grub-install --efi-directory=/boot/efi --bootloader 
+	   -id='Arch Linux' --target=x86_64-efi'
+	2) Configuramos GRUB: 'grub-mkconfig -o /boot/grub/grub.cfg'
+
+➵ CLAVE ROOT Y CREACION DE USER:
+	1) Creamos la clave ROOT: 'passwd "clave"'
+	2) Creamos un usuario: 'useradd -m "nombre usuario"'
+	3) Creamos clave al usuario: 'passwd "nombre usuario"'
+
+
+ <--- PONEMOS 'exit' PARA DEVOLVERNOS A LA INSTALACION Y 'reboot now' PARA REINICIAR --->
+
+
+➵ CONFIGURACION INTERNET:
+	1) Entramos como root: 'su' y la clave
+	2) Iniciamos servicio de NetworkManager 'systemctl start NetworkManager.service'
+	3) Activamos NetworkManager 'systemctl enable NetworkManager.service'
+	4) Buscamos nuestro WIFI: 'nmcli dev wifi' y buscamos nuestra red
+	5) Conectamos a WIFI: 'nmcli dev wifi connect "nombre" password "clave"
+
+➵ DRIVERS DE GRAFICA:
+	1) Comprobamos la grafica: 'lspci | grep VGA'
+	2) Instalamos controlador correspondiente: 
+		-(Generico): 	'pacman -S xf86-video-vesa'
+		-(NVIDIA):	'pacman -S xf86-video-nouveau'
+		-(AMD/ATI):	'pacman -S xf86-video-ati'
+		-(INTEL):	'pacman -S xf86-video-intel intel-ucode'
+
+➵ BASES PARA ENTORNO GRAFICO:
+	1) drivers para entorno graficos: 'pacman -S xorg-server xorg-xinit'
+
+
+
+   <--- ELEGIMOS NUESTRO ENTORNO DE ESCRITORIO --->
+EN CARPETA 'BSPWM' HAY DOCUMENTACION PARA INSTALAR "BSPWM WINDOW MANAGER"
